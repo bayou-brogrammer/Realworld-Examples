@@ -7,10 +7,12 @@ version = "0.1.0"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-axum            = "0.6.18"
-shuttle-axum    = "0.18.0"
-shuttle-runtime = "0.18.0"
-tokio           = "1.28.2"
+axum       = { version = "0.6", features = ["headers"] }
+axum-extra = { version = "0.7", features = [] }
+
+shuttle-axum    = "0.18"
+shuttle-runtime = "0.18"
+tokio           = "1"
 
 async-trait = "0.1"
 diesel-async = { version = "0.3", features = ["postgres", "deadpool"] }
@@ -21,3 +23,8 @@ diesel_migrations_async = { git = "https://github.com/aumetra/diesel_migrations_
 diesel          = { version = "2", features = ["postgres"] }
 serde           = { version = "1.0", features = ["derive"] }
 shuttle-service = { version = "0.18", default-features = false }
+
+dotenvy    = "0.15"
+thiserror  = "1.0"
+tower      = { version = "0.4", default-features = true, features = ["buffer", "timeout"] }
+tower-http = { version = "0.4", features = ["fs", "compression-full"] }

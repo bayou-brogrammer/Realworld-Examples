@@ -1,17 +1,25 @@
 mod disel_service;
+mod error;
 mod models;
+mod routes;
 mod schema;
 
-use axum::{routing::get, Router};
 use disel_service::PgPool;
-
-async fn hello_world() -> &'static str {
-    "Hello, world!"
-}
 
 #[shuttle_runtime::main]
 async fn axum(#[disel_service::Postgres] pool: PgPool) -> shuttle_axum::ShuttleAxum {
-    let router = Router::new().route("/", get(hello_world));
+    use self::schema::posts::dsl::*;
 
-    Ok(router.into())
+    // let mut conn = pool.get().await.unwrap();
+
+    // let results = posts
+    //     .filter(published.eq(true))
+    //     .limit(5)
+    //     .select(Post::as_select())
+    //     .load(&mut conn)
+    //     .await;
+
+    // println!("results: {:?}", results);
+
+    Ok(routes::axum_service())
 }
