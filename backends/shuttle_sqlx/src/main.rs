@@ -1,8 +1,8 @@
 mod api;
-mod auth;
 mod db;
 mod error;
 mod routes;
+mod utils;
 
 use axum::extract::FromRef;
 use jsonwebtoken::{DecodingKey, EncodingKey};

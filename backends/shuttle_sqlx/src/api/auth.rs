@@ -6,9 +6,8 @@ use sqlx::PgPool;
 use validator::Validate;
 
 use crate::{
-    auth,
-    db::UserAuth,
     error::{AppError, AppResult, DBError},
+    utils::{auth::UserAuth, hasher},
 };
 
 // ================================================= LOGIN ================================================= //
@@ -59,8 +58,7 @@ pub async fn login(
             AppError::Forbidden("email or password is invalid")
         })?;
 
-    user_auth.token = Some(crate::auth::generate_jwt(user_auth.id, &key)?);
-
+    user_auth.generate_jwt(&key)?;
     Ok(Json(json!({ "user": user_auth })))
 }
 
@@ -102,7 +100,7 @@ pub async fn registration(
 ) -> AppResult<impl IntoResponse> {
     user.validate()?;
 
-    let hash = auth::hash_password(&user.password)?;
+    let hash = hasher::hash_password(&user.password)?;
     let mut conn = pool.acquire().await.unwrap();
 
     let user_auth = sqlx::query_as!(
@@ -125,6 +123,6 @@ pub async fn registration(
     };
 
     let mut user_auth = user_auth.unwrap();
-    user_auth.token = Some(crate::auth::generate_jwt(user_auth.id, &key)?);
+    user_auth.generate_jwt(&key)?;
     Ok(Json(json!({ "user": user_auth })))
 }

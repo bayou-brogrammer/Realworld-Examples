@@ -23,14 +23,15 @@ pub struct UserAuth {
 }
 
 impl UserAuth {
-    pub fn generate_jwt(&self, key: &EncodingKey) -> AppResult<String> {
+    pub fn generate_jwt(&mut self, key: &EncodingKey) -> AppResult<()> {
         let exp = (chrono::Utc::now() + chrono::Duration::days(30)).timestamp();
         let claims = Claims {
             exp,
             user_id: self.id,
         };
         let token = jsonwebtoken::encode(&Header::new(Algorithm::RS384), &claims, key)?;
-        Ok(token)
+        self.token = Some(token);
+        Ok(())
     }
 
     pub fn decode_jwt(&self, key: &DecodingKey) -> AppResult<Claims> {

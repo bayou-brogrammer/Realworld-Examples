@@ -11,9 +11,9 @@ use sqlx::PgPool;
 use validator::Validate;
 
 use crate::{
-    auth::{self, JWTToken},
     db::{retrieve_article, Article, UserProfile},
     error::{AppError, AppResult, DBError},
+    utils::jwt::{self, JWTToken},
 };
 
 #[derive(Deserialize)]
@@ -47,7 +47,7 @@ pub async fn create_article(
 
     article.validate()?;
 
-    let user_id = auth::verify_token(&token.0, &key)?;
+    let user_id = jwt::verify_token(&token.0, &key)?;
 
     let slug = slug::slugify(&article.title);
     let tags = article.tag_list;
@@ -118,7 +118,7 @@ pub async fn get_articles(
     token: Option<TypedHeader<Authorization<JWTToken>>>,
 ) -> AppResult<impl IntoResponse> {
     let user_id = token
-        .map(|TypedHeader(Authorization(token))| auth::verify_token(&token.0, &key))
+        .map(|TypedHeader(Authorization(token))| jwt::verify_token(&token.0, &key))
         .transpose()?;
 
     let articles = sqlx::query_file_as!(
@@ -159,7 +159,7 @@ pub async fn get_feed_articles(
         return Err(AppError::Unauthorized);
     };
 
-    let user_id = auth::verify_token(&token.0, &key)?;
+    let user_id = jwt::verify_token(&token.0, &key)?;
 
     let articles = sqlx::query_file_as!(
         Article,
@@ -185,7 +185,7 @@ pub async fn get_article(
     token: Option<TypedHeader<Authorization<JWTToken>>>,
 ) -> AppResult<impl IntoResponse> {
     let user_id = token
-        .map(|TypedHeader(Authorization(token))| auth::verify_token(&token.0, &key))
+        .map(|TypedHeader(Authorization(token))| jwt::verify_token(&token.0, &key))
         .transpose()?;
 
     let article = retrieve_article(&pool, slug, user_id).await?;
@@ -203,7 +203,7 @@ pub async fn delete_article(
         return Err(AppError::Unauthorized);
     };
 
-    let user_id = auth::verify_token(&token.0, &key)?;
+    let user_id = jwt::verify_token(&token.0, &key)?;
     let deleted = sqlx::query!(
         r#"
         DELETE FROM articles
@@ -248,7 +248,7 @@ pub async fn update_article(
         return Err(AppError::Unauthorized);
     };
 
-    let user_id = auth::verify_token(&token.0, &key)?;
+    let user_id = jwt::verify_token(&token.0, &key)?;
     let new_slug = article.title.as_ref().map(slug::slugify);
 
     let article = sqlx::query_file_as!(
@@ -278,7 +278,7 @@ pub async fn favorite_article(
         return Err(AppError::Unauthorized);
     };
 
-    let user_id = auth::verify_token(&token.0, &key)?;
+    let user_id = jwt::verify_token(&token.0, &key)?;
 
     sqlx::query!(
         "
@@ -308,7 +308,7 @@ pub async fn un_favorite(
         return Err(AppError::Unauthorized);
     };
 
-    let user_id = auth::verify_token(&token.0, &key)?;
+    let user_id = jwt::verify_token(&token.0, &key)?;
 
     sqlx::query!(
         "

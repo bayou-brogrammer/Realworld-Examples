@@ -11,8 +11,8 @@ use sqlx::PgPool;
 use validator::Validate;
 
 use crate::{
-    auth::{self, JWTToken},
     error::{AppError, AppResult},
+    utils::jwt::{self, JWTToken},
 };
 
 use crate::db::Comment;
@@ -42,7 +42,7 @@ pub async fn create_comment(
         return Err(AppError::Unauthorized);
     };
 
-    let user_id = auth::verify_token(&token.0, &key)?;
+    let user_id = jwt::verify_token(&token.0, &key)?;
 
     let comment = sqlx::query_as!(
         Comment,
@@ -89,7 +89,7 @@ pub async fn get_comments(
     token: Option<TypedHeader<Authorization<JWTToken>>>,
 ) -> AppResult<impl IntoResponse> {
     let user_id = token
-        .map(|TypedHeader(Authorization(token))| auth::verify_token(&token.0, &key))
+        .map(|TypedHeader(Authorization(token))| jwt::verify_token(&token.0, &key))
         .transpose()?;
 
     let comments = sqlx::query_as!(
@@ -137,7 +137,7 @@ pub async fn delete_comment(
         return Err(AppError::Unauthorized);
     };
 
-    let user_id = auth::verify_token(&token.0, &key)?;
+    let user_id = jwt::verify_token(&token.0, &key)?;
 
     let deleted = sqlx::query!(
         r#"

@@ -3,11 +3,12 @@ use serde::Serialize;
 use sqlx::PgPool;
 
 use crate::{
-    auth::{self},
     error::{AppError, AppResult, DBError},
+    utils::{
+        auth::{UserAuth, UserId},
+        jwt,
+    },
 };
-
-use super::{UserAuth, UserId};
 
 #[derive(Debug, Default, Serialize, sqlx::Type)]
 pub struct UserProfile {
@@ -20,7 +21,7 @@ pub struct UserProfile {
 }
 
 pub async fn auth_user(pool: &PgPool, token: &str, key: &DecodingKey) -> AppResult<UserAuth> {
-    let user_id = auth::verify_token(token, key)?;
+    let user_id = jwt::verify_token(token, key)?;
     let mut user = get_user(user_id, pool).await?;
     user.token = Some(token.to_string());
     Ok(user)

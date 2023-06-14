@@ -11,9 +11,13 @@ use sqlx::PgPool;
 use validator::Validate;
 
 use crate::{
-    auth::{self, JWTToken},
-    db::{auth_user, get_user_profile, UserAuth},
+    db::{auth_user, get_user_profile},
     error::{AppError, AppResult},
+    utils::{
+        auth::UserAuth,
+        hasher,
+        jwt::{self, JWTToken},
+    },
 };
 
 #[derive(Debug, Deserialize, Validate)]
@@ -56,7 +60,10 @@ pub async fn update_user(
     };
 
     let user = auth_user(&pool, &token.0, &key).await?;
-    let hash = updated_user.password.map(auth::hash_password).transpose()?;
+    let hash = updated_user
+        .password
+        .map(hasher::hash_password)
+        .transpose()?;
 
     let mut updated_user = sqlx::query_as!(
         UserAuth,
@@ -94,7 +101,7 @@ pub async fn get_profile(
     token: Option<TypedHeader<Authorization<JWTToken>>>,
 ) -> AppResult<impl IntoResponse> {
     let user_id = token
-        .map(|TypedHeader(Authorization(token))| auth::verify_token(&token.0, &key))
+        .map(|TypedHeader(Authorization(token))| jwt::verify_token(&token.0, &key))
         .transpose()?;
 
     let profile = get_user_profile(&pool, &username, user_id).await?;
@@ -112,7 +119,7 @@ pub async fn follow_profile(
         return Err(AppError::Unauthorized);
     };
 
-    let follower_id = auth::verify_token(&token.0, &key)?;
+    let follower_id = jwt::verify_token(&token.0, &key)?;
     let mut followee = get_user_profile(&pool, &username, Some(follower_id)).await?;
 
     sqlx::query!(
@@ -141,7 +148,7 @@ pub async fn unfollow_profile(
         return Err(AppError::Unauthorized);
     };
 
-    let follower_id = auth::verify_token(&token.0, &key)?;
+    let follower_id = jwt::verify_token(&token.0, &key)?;
     let mut followee = get_user_profile(&pool, &username, Some(follower_id)).await?;
 
     if !followee.following {
