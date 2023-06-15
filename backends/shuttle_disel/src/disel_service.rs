@@ -1,8 +1,9 @@
 use async_trait::async_trait;
-use diesel_async::{
-    pooled_connection::{deadpool::Pool, AsyncDieselConnectionManager},
-    AsyncPgConnection,
+use diesel::{
+    r2d2::{ConnectionManager, Pool},
+    PgConnection,
 };
+
 use serde::Serialize;
 use shuttle_service::{
     database::{SharedEngine, Type as DatabaseType},
@@ -13,7 +14,7 @@ pub use diesel_async;
 pub use diesel_migrations_async;
 
 const MAX_POOL_SIZE: usize = 5;
-pub type PgPool = Pool<AsyncPgConnection>;
+pub type PgPool = Pool<PgConnection>;
 
 #[derive(Default, Serialize)]
 pub struct Postgres {
@@ -39,7 +40,7 @@ fn get_connection_string(db_output: &DbOutput) -> String {
 }
 
 #[async_trait]
-impl ResourceBuilder<Pool<AsyncPgConnection>> for Postgres {
+impl ResourceBuilder<Pool<PgConnection>> for Postgres {
     const TYPE: Type = Type::Database(DatabaseType::Shared(SharedEngine::Postgres));
 
     type Config = Self;
@@ -69,11 +70,9 @@ impl ResourceBuilder<Pool<AsyncPgConnection>> for Postgres {
         Ok(db_output)
     }
 
-    async fn build(
-        db_output: &Self::Output,
-    ) -> Result<Pool<AsyncPgConnection>, shuttle_service::Error> {
+    async fn build(db_output: &Self::Output) -> Result<Pool<PgConnection>, shuttle_service::Error> {
         let conn_string = get_connection_string(db_output);
-        let config = AsyncDieselConnectionManager::new(conn_string);
+        let config = ConnectionManager::new(conn_string);
         Pool::builder(config)
             .max_size(MAX_POOL_SIZE)
             .build()

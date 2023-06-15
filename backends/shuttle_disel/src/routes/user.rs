@@ -1,5 +1,9 @@
-use axum::Router;
+use actix_web::{dev::HttpServiceFactory, web};
 
-pub fn user_routes() -> Router {
-    Router::new()
+use crate::api;
+
+pub fn user_routes() -> impl HttpServiceFactory {
+    web::scope("/users")
+        .service(api::user::login)
+        .service(api::user::registration)
 }

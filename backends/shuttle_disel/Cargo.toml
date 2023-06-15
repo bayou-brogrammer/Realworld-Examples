@@ -7,24 +7,34 @@ version = "0.1.0"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-axum       = { version = "0.6", features = ["headers"] }
-axum-extra = { version = "0.7", features = [] }
 
-shuttle-axum    = "0.18"
-shuttle-runtime = "0.18"
-tokio           = "1"
+chrono = "0.4.6"
 
-async-trait = "0.1"
-diesel-async = { version = "0.3", features = ["postgres", "deadpool"] }
-diesel_migrations_async = { git = "https://github.com/aumetra/diesel_migrations_async.git", rev = "296db45f2b2120a496f7231537685fe5974c0829", features = [
-    "postgres",
-] }
+serde      = { version = "1.0", features = ["derive"] }
+serde_json = "1"
+uuid       = { version = "1", features = ["serde", "v4"] }
 
-diesel          = { version = "2", features = ["postgres"] }
-serde           = { version = "1.0", features = ["derive"] }
-shuttle-service = { version = "0.18", default-features = false }
+dotenvy   = "0.15"
+thiserror = "1.0"
 
-dotenvy    = "0.15"
-thiserror  = "1.0"
-tower      = { version = "0.4", default-features = true, features = ["buffer", "timeout"] }
-tower-http = { version = "0.4", features = ["fs", "compression-full"] }
+async-trait  = "0.1"
+diesel       = { version = "2", features = ["chrono", "postgres", "r2d2", "serde_json", "uuid"] }
+futures      = "0.3"
+jsonwebtoken = "8"
+tower        = { version = "0.4", default-features = true, features = ["buffer", "timeout"] }
+tower-http   = { version = "0.4", features = ["fs", "compression-full"] }
+validator    = { version = "0.16", features = ["derive", "unic"] }
+
+actix     = "0.13"
+actix-web = "4.3.1"
+
+dotenv            = "0.15"
+lazy_static       = "1.4"
+libreauth         = "0.16"
+num_cpus          = "1"
+shuttle-actix-web = "0.18.0"
+shuttle-runtime   = "0.18"
+shuttle-service   = { version = "0.18", default-features = false }
+shuttle-shared-db = { version = "0.18", features = ["postgres"] }
+sqlx              = { version = "0.6", default-features = false }
+tokio             = "1"
