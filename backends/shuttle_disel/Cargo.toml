@@ -8,8 +8,7 @@ version = "0.1.0"
 
 [dependencies]
 
-chrono = "0.4.6"
-
+chrono     = "0.4.6"
 serde      = { version = "1.0", features = ["derive"] }
 serde_json = "1"
 uuid       = { version = "1", features = ["serde", "v4"] }
@@ -17,18 +16,18 @@ uuid       = { version = "1", features = ["serde", "v4"] }
 dotenvy   = "0.15"
 thiserror = "1.0"
 
-async-trait  = "0.1"
-diesel       = { version = "2", features = ["chrono", "postgres", "r2d2", "serde_json", "uuid"] }
-futures      = "0.3"
-jsonwebtoken = "8"
-tower        = { version = "0.4", default-features = true, features = ["buffer", "timeout"] }
-tower-http   = { version = "0.4", features = ["fs", "compression-full"] }
-validator    = { version = "0.16", features = ["derive", "unic"] }
+async-trait = "0.1"
+diesel      = { version = "2", features = ["chrono", "postgres", "r2d2", "serde_json", "uuid"] }
+futures     = "0.3"
+tower       = { version = "0.4", default-features = true, features = ["buffer", "timeout"] }
+tower-http  = { version = "0.4", features = ["fs", "compression-full"] }
+validator   = { version = "0.16", features = ["derive", "unic"] }
 
 actix     = "0.13"
 actix-web = "4.3.1"
 
 dotenv            = "0.15"
+jsonwebtoken      = "8"
 lazy_static       = "1.4"
 libreauth         = "0.16"
 num_cpus          = "1"

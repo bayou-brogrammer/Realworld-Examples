@@ -63,6 +63,8 @@ async fn actix_web(
             web::scope("/api")
                 .wrap(Logger::default())
                 .service(routes::user::user_routes())
+                .service(routes::user::users_routes())
+                .service(routes::profile::profile_routes())
                 .app_data(state),
         );
     };

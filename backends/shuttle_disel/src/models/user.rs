@@ -25,3 +25,13 @@ pub struct NewUser {
     pub bio: Option<String>,
     pub image: Option<String>,
 }
+
+#[derive(Debug, AsChangeset)]
+#[table_name = "users"]
+pub struct UserChange {
+    pub bio: Option<String>,
+    pub email: Option<String>,
+    pub image: Option<String>,
+    pub username: Option<String>,
+    pub password: Option<String>,
+}

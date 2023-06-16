@@ -1,9 +1,11 @@
 use crate::error::AppResult;
 use crate::utils::jwt::GenerateJwt;
+use crate::utils::{authenticate, Auth};
 use crate::{models::user::User, AppState};
 use actix::Message;
 use actix_web::web::{self, Json};
-use actix_web::{HttpResponse, ResponseError};
+use actix_web::{HttpRequest, HttpResponse, ResponseError};
+use futures::TryFutureExt;
 use serde::{Deserialize, Serialize};
 use validator::Validate;
 
@@ -51,6 +53,27 @@ pub struct LoginUser {
     pub password: String,
 }
 
+#[derive(Debug, Deserialize, Validate, Message, Clone)]
+#[rtype(result = "AppResult<UserResponse>")]
+pub struct UpdateUserData {
+    pub bio: Option<String>,
+    pub image: Option<String>,
+
+    #[validate(email)]
+    pub email: Option<String>,
+    #[validate(non_control_character, length(min = 1, max = 64))]
+    pub username: Option<String>,
+    #[validate(non_control_character, length(min = 8, max = 64))]
+    pub password: Option<String>,
+}
+
+#[derive(Clone, Debug, Message)]
+#[rtype(result = "AppResult<UserResponse>")]
+pub struct UpdateUserOuter {
+    pub auth: Auth,
+    pub update_user: UpdateUserData,
+}
+
 // ================================== JSON Response Objects ================================== //
 
 #[derive(Debug, Serialize)]
@@ -81,6 +104,20 @@ impl From<User> for UserResponse {
     }
 }
 
+impl UserResponse {
+    fn create_with_auth(auth: crate::utils::Auth) -> Self {
+        UserResponse {
+            user: UserResponseInner {
+                token: auth.token,
+                email: auth.user.email,
+                username: auth.user.username,
+                bio: auth.user.bio,
+                image: auth.user.image,
+            },
+        }
+    }
+}
+
 // ================================== Handlers ================================== //
 
 #[actix_web::post("")]
@@ -91,14 +128,10 @@ async fn registration(
     let register_user = form.into_inner().user;
     register_user.validate()?;
 
-    let r = state.db.send(register_user).await?;
-
-    println!("{:?}", r);
-
-    match r {
-        Ok(res) => Ok(HttpResponse::Ok().json(res)),
-        Err(e) => Ok(e.error_response()),
-    }
+    Ok(state.db.send(register_user).await.map(|res| match res {
+        Err(e) => e.error_response(),
+        Ok(res) => HttpResponse::Ok().json(res),
+    })?)
 }
 
 #[actix_web::get("/login")]
@@ -113,4 +146,41 @@ pub async fn login(
         Err(e) => e.error_response(),
         Ok(res) => HttpResponse::Ok().json(res),
     })?)
+}
+
+#[actix_web::get("")]
+pub async fn get_current_user(
+    req: HttpRequest,
+    state: web::Data<AppState>,
+) -> AppResult<HttpResponse> {
+    authenticate(&state, &req)
+        .and_then(|auth| {
+            futures::future::ok(HttpResponse::Ok().json(UserResponse::create_with_auth(auth)))
+        })
+        .await
+}
+
+#[actix_web::put("")]
+pub async fn update_user(
+    req: HttpRequest,
+    state: web::Data<AppState>,
+    form: Json<In<UpdateUserData>>,
+) -> AppResult<HttpResponse> {
+    use futures::future::*;
+
+    let update_user = form.into_inner().user;
+    update_user.validate()?;
+
+    authenticate(&state, &req)
+        .and_then(|auth| async {
+            Ok(state
+                .db
+                .send(UpdateUserOuter { auth, update_user })
+                .await
+                .map(|res| match res {
+                    Ok(res) => HttpResponse::Ok().json(res),
+                    Err(e) => e.error_response(),
+                })?)
+        })
+        .await
 }

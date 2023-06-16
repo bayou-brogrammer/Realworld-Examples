@@ -1,5 +1,7 @@
 pub mod auth;
 pub use auth::*;
+pub mod profile;
+pub use profile::*;
 mod user;
 pub use user::*;
 
