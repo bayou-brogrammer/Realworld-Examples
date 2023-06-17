@@ -3,7 +3,7 @@ use diesel::{AsChangeset, Identifiable, Insertable, Queryable, Selectable};
 use serde::Deserialize;
 use uuid::Uuid;
 
-use crate::schema::articles;
+use crate::schema::{articles, favorite_articles};
 
 #[derive(Debug, Clone, Deserialize, Queryable, Identifiable, Selectable, Insertable)]
 pub struct Article {
@@ -34,4 +34,11 @@ pub struct UpdateArticle {
     pub body: Option<String>,
     pub title: Option<String>,
     pub description: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize, Insertable)]
+#[diesel(table_name = favorite_articles)]
+pub struct NewFavoriteArticle {
+    pub user_id: Uuid,
+    pub article_id: Uuid,
 }

@@ -62,7 +62,9 @@ async fn actix_web(
                 .service(routes::user::user_routes())
                 .service(routes::user::users_routes())
                 .service(routes::profile::profile_routes())
+                .service(routes::articles::article_feed_routes())
                 .service(routes::articles::article_routes())
+                .service(routes::tags::tags_routes())
                 .app_data(state),
         );
     };

@@ -7,6 +7,9 @@ pub use articles::*;
 pub mod profile;
 pub use profile::*;
 
+mod tags;
+pub use tags::*;
+
 mod user;
 pub use user::*;
 

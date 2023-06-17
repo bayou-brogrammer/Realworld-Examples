@@ -7,11 +7,13 @@ use slug::slugify;
 use uuid::Uuid;
 
 use crate::api::articles::{
-    ArticleResponse, CreateArticleOuter, DeleteArticle, GetArticle, UpdateArticleOuter,
+    ArticleListResponse, ArticleResponse, ArticleResponseInner, CreateArticleOuter, DeleteArticle,
+    FavoriteArticle, GetArticle, GetArticles, GetFeedArticles, UnFavoriteArticle,
+    UpdateArticleOuter,
 };
 use crate::db::DbExecutor;
 use crate::error::AppResult;
-use crate::models::articles::{Article, NewArticle, UpdateArticle};
+use crate::models::articles::{Article, NewArticle, NewFavoriteArticle, UpdateArticle};
 use crate::models::tags::{ArticleTag, NewArticleTag};
 use crate::models::user::User;
 
@@ -132,6 +134,146 @@ impl Handler<DeleteArticle> for DbExecutor {
     }
 }
 
+impl Handler<GetArticles> for DbExecutor {
+    type Result = AppResult<ArticleListResponse>;
+
+    fn handle(&mut self, msg: GetArticles, _: &mut Self::Context) -> Self::Result {
+        use crate::schema::{articles, users};
+
+        let mut conn = self.0.get()?;
+
+        let mut query = articles::table.into_boxed();
+
+        // Author username
+        if let Some(ref author_name) = msg.params.author {
+            let articles_by_author = articles::table
+                .inner_join(users::table)
+                .filter(users::username.eq(author_name))
+                .select(articles::id)
+                .load::<Uuid>(&mut conn)?;
+
+            query = query.filter(articles::id.eq_any(articles_by_author));
+        }
+
+        // Favorited by user
+        if let Some(favorited_username) = msg.params.favorited {
+            let favorited_by_user = articles::table
+                .inner_join(users::table)
+                .filter(users::username.eq(favorited_username))
+                .select(articles::id)
+                .load::<Uuid>(&mut conn)?;
+
+            query = query.filter(articles::id.eq_any(favorited_by_user));
+        }
+
+        // Tags
+        if let Some(tag) = msg.params.tag {
+            use crate::schema::article_tags;
+
+            let tagged_article_ids: Vec<Uuid> = article_tags::table
+                .filter(article_tags::tag_name.eq(tag))
+                .select(article_tags::article_id)
+                .load::<Uuid>(&mut conn)?;
+
+            query = query.filter(articles::id.eq_any(tagged_article_ids));
+        }
+
+        let limit = std::cmp::min(msg.params.limit.unwrap_or(20), 100) as i64;
+        let offset = msg.params.offset.unwrap_or(0) as i64;
+
+        let articles = query
+            .order(articles::created_at.desc())
+            .limit(limit)
+            .offset(offset)
+            .load::<Article>(&mut conn)?;
+
+        match msg.auth {
+            Some(auth) => get_article_list_response(conn.deref_mut(), articles, Some(auth.user.id)),
+            None => get_article_list_response(conn.deref_mut(), articles, None),
+        }
+    }
+}
+
+impl Handler<GetFeedArticles> for DbExecutor {
+    type Result = AppResult<ArticleListResponse>;
+
+    fn handle(&mut self, msg: GetFeedArticles, _: &mut Self::Context) -> Self::Result {
+        use crate::schema::{articles, followers};
+
+        let mut conn = self.0.get()?;
+
+        let limit = std::cmp::min(msg.params.limit.unwrap_or(20), 100) as i64;
+        let offset = msg.params.offset.unwrap_or(0) as i64;
+        let user_id = msg.auth.user.id;
+
+        println!("user_id: {:?}", user_id);
+
+        let following_ids = followers::table
+            .filter(followers::follower_id.eq(user_id))
+            .select(followers::user_id)
+            .load::<Uuid>(&mut conn)?;
+
+        println!("user_id: {:?}", user_id);
+
+        let articles = articles::table
+            .filter(articles::author_id.eq_any(following_ids))
+            .order(articles::created_at.desc())
+            .limit(limit)
+            .offset(offset)
+            .get_results::<Article>(&mut conn)?;
+
+        get_article_list_response(conn.deref_mut(), articles, Some(user_id))
+    }
+}
+
+impl Handler<FavoriteArticle> for DbExecutor {
+    type Result = AppResult<ArticleResponse>;
+
+    fn handle(&mut self, msg: FavoriteArticle, _: &mut Self::Context) -> Self::Result {
+        use crate::schema::{articles, favorite_articles};
+
+        let mut conn = self.0.get()?;
+
+        let article = articles::table
+            .filter(articles::slug.eq(msg.slug))
+            .get_result::<Article>(&mut conn)?;
+
+        match diesel::insert_into(favorite_articles::table)
+            .values(NewFavoriteArticle {
+                article_id: article.id,
+                user_id: msg.auth.user.id,
+            })
+            .execute(&mut conn)
+        {
+            Ok(_) => get_article_response(conn.deref_mut(), article.slug, Some(article.author_id)),
+            Err(_) => Err(crate::error::AppError::UnprocessableEntity(
+                json!({ "errors": "Article already favorited" }),
+            )),
+        }
+    }
+}
+
+impl Handler<UnFavoriteArticle> for DbExecutor {
+    type Result = AppResult<ArticleResponse>;
+
+    fn handle(&mut self, msg: UnFavoriteArticle, _: &mut Self::Context) -> Self::Result {
+        use crate::schema::{articles, favorite_articles};
+
+        let mut conn = self.0.get()?;
+
+        let article = articles::table
+            .filter(articles::slug.eq(msg.slug))
+            .get_result::<Article>(&mut conn)?;
+
+        diesel::delete(favorite_articles::table)
+            .filter(favorite_articles::user_id.eq(msg.auth.user.id))
+            .filter(favorite_articles::article_id.eq(article.id))
+            .execute(&mut conn)?;
+
+        get_article_response(conn.deref_mut(), article.slug, Some(article.author_id))
+    }
+}
+
 // ================== HELPERS ================== //
 fn get_article_response(
     conn: &mut PgConnection,
@@ -161,6 +303,27 @@ fn get_article_response(
         favorites_count,
         following,
     ))
+}
+
+fn get_article_list_response(
+    conn: &mut PgConnection,
+    articles: Vec<Article>,
+    user_id: Option<Uuid>,
+) -> AppResult<ArticleListResponse> {
+    let article_list = articles
+        .iter()
+        .map(
+            |article| match get_article_response(conn, article.slug.to_owned(), user_id) {
+                Ok(response) => Ok(response.article),
+                Err(e) => Err(e),
+            },
+        )
+        .collect::<AppResult<Vec<ArticleResponseInner>>>()?;
+
+    Ok(ArticleListResponse {
+        articles_count: article_list.len(),
+        articles: article_list,
+    })
 }
 
 fn add_tag<T>(conn: &mut PgConnection, article_id: Uuid, tag_name: T) -> AppResult<ArticleTag>

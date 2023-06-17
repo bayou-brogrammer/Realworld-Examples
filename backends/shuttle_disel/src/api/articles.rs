@@ -4,7 +4,7 @@ use crate::models::user::User;
 use crate::utils::{authenticate, Auth, CustomDateTime};
 use crate::AppState;
 use actix::Message;
-use actix_web::web::{self, Json};
+use actix_web::web::{self, Json, Query};
 use actix_web::{HttpRequest, HttpResponse, ResponseError};
 use futures::{FutureExt, TryFutureExt};
 use serde::{Deserialize, Serialize};
@@ -24,6 +24,12 @@ pub struct ArticlesParams {
     pub tag: Option<String>,
     pub author: Option<String>,
     pub favorited: Option<String>,
+    pub limit: Option<usize>,  // <- if not set, is 20
+    pub offset: Option<usize>, // <- if not set, is 0
+}
+
+#[derive(Debug, Deserialize)]
+pub struct FeedParams {
     pub limit: Option<usize>,  // <- if not set, is 20
     pub offset: Option<usize>, // <- if not set, is 0
 }
@@ -83,8 +89,29 @@ pub struct GetArticles {
 }
 
 #[derive(Debug, Message)]
+#[rtype(result = "AppResult<ArticleListResponse>")]
+pub struct GetFeedArticles {
+    pub auth: Auth,
+    pub params: FeedParams,
+}
+
+#[derive(Debug, Message)]
 #[rtype(result = "AppResult<serde_json::Value>")]
 pub struct DeleteArticle {
+    pub auth: Auth,
+    pub slug: String,
+}
+
+#[derive(Debug, Message)]
+#[rtype(result = "AppResult<ArticleResponse>")]
+pub struct FavoriteArticle {
+    pub auth: Auth,
+    pub slug: String,
+}
+
+#[derive(Debug, Message)]
+#[rtype(result = "AppResult<ArticleResponse>")]
+pub struct UnFavoriteArticle {
     pub auth: Auth,
     pub slug: String,
 }
@@ -193,6 +220,52 @@ async fn get_article(
         .await)
 }
 
+#[actix_web::get("")]
+async fn get_feed_articles(
+    req: HttpRequest,
+    params: Query<FeedParams>,
+    state: web::Data<AppState>,
+) -> AppResult<HttpResponse> {
+    let db = &state.db;
+
+    Ok(authenticate(&state, &req)
+        .and_then(|auth| async move {
+            db.send(GetFeedArticles {
+                auth,
+                params: params.into_inner(),
+            })
+            .await?
+        })
+        .map(|res| match res {
+            Err(e) => e.error_response(),
+            Ok(res) => HttpResponse::Ok().json(res),
+        })
+        .await)
+}
+
+#[actix_web::get("/")]
+async fn get_articles(
+    req: HttpRequest,
+    state: web::Data<AppState>,
+    params: Query<ArticlesParams>,
+) -> AppResult<HttpResponse> {
+    let db = &state.db;
+
+    Ok(authenticate(&state, &req)
+        .then(|auth| async move {
+            db.send(GetArticles {
+                auth: auth.ok(),
+                params: params.into_inner(),
+            })
+            .await?
+        })
+        .map(|res| match res {
+            Err(e) => e.error_response(),
+            Ok(res) => HttpResponse::Ok().json(res),
+        })
+        .await)
+}
+
 #[actix_web::put("/{slug}")]
 async fn update_article(
     req: HttpRequest,
@@ -232,6 +305,52 @@ async fn delete_article(
     Ok(authenticate(&state, &req)
         .and_then(|auth| async move {
             db.send(DeleteArticle {
+                auth,
+                slug: slug.into_inner(),
+            })
+            .await?
+        })
+        .map(|res| match res {
+            Err(e) => e.error_response(),
+            Ok(res) => HttpResponse::Ok().json(res),
+        })
+        .await)
+}
+
+#[actix_web::post("/{slug}/favorite")]
+async fn favorite_article(
+    req: HttpRequest,
+    slug: web::Path<String>,
+    state: web::Data<AppState>,
+) -> AppResult<HttpResponse> {
+    let db = &state.db;
+
+    Ok(authenticate(&state, &req)
+        .and_then(|auth| async move {
+            db.send(FavoriteArticle {
+                auth,
+                slug: slug.into_inner(),
+            })
+            .await?
+        })
+        .map(|res| match res {
+            Err(e) => e.error_response(),
+            Ok(res) => HttpResponse::Ok().json(res),
+        })
+        .await)
+}
+
+#[actix_web::delete("/{slug}/favorite")]
+async fn unfavorite_article(
+    req: HttpRequest,
+    slug: web::Path<String>,
+    state: web::Data<AppState>,
+) -> AppResult<HttpResponse> {
+    let db = &state.db;
+
+    Ok(authenticate(&state, &req)
+        .and_then(|auth| async move {
+            db.send(UnFavoriteArticle {
                 auth,
                 slug: slug.into_inner(),
             })
