@@ -2,9 +2,10 @@ use crate::schema::users;
 use chrono::NaiveDateTime;
 use diesel::prelude::*;
 use diesel::Queryable;
+use serde::Deserialize;
 use uuid::Uuid;
 
-#[derive(Debug, Queryable, Identifiable, Clone)]
+#[derive(Debug, Clone, Deserialize, Queryable, Identifiable, Selectable)]
 pub struct User {
     pub id: Uuid,
     pub email: String,
@@ -17,7 +18,7 @@ pub struct User {
 }
 
 #[derive(Debug, Insertable)]
-#[table_name = "users"]
+#[diesel(table_name = users)]
 pub struct NewUser {
     pub username: String,
     pub email: String,
@@ -27,7 +28,7 @@ pub struct NewUser {
 }
 
 #[derive(Debug, AsChangeset)]
-#[table_name = "users"]
+#[diesel(table_name = users)]
 pub struct UserChange {
     pub bio: Option<String>,
     pub email: Option<String>,

@@ -19,6 +19,7 @@ use diesel::r2d2::{self, ConnectionManager};
 use dotenv::dotenv;
 use error::AppResult;
 use shuttle_actix_web::ShuttleActixWeb;
+
 #[derive(Clone)]
 pub struct AppState {
     // pub pool: PgPool,
@@ -35,10 +36,6 @@ async fn actix_web(
     #[shuttle_shared_db::Postgres] _pool: sqlx::PgPool,
 ) -> ShuttleActixWeb<impl FnOnce(&mut ServiceConfig) + Send + Clone + 'static> {
     dotenv().ok();
-
-    for (key, value) in std::env::vars() {
-        println!("{}: {}", key, value);
-    }
 
     let pool = match new_pool("postgres://postgres:postgres@localhost:23935/postgres") {
         Ok(pool) => pool,
@@ -65,6 +62,7 @@ async fn actix_web(
                 .service(routes::user::user_routes())
                 .service(routes::user::users_routes())
                 .service(routes::profile::profile_routes())
+                .service(routes::articles::article_routes())
                 .app_data(state),
         );
     };

@@ -22,7 +22,7 @@ impl IntoFuture for AppError {
     }
 }
 
-#[derive(Error, Debug)]
+#[derive(Error, Debug, Clone)]
 pub enum AppError {
     // 401
     #[error("Unauthorized")]

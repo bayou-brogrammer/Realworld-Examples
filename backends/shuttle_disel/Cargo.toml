@@ -31,9 +31,10 @@ jsonwebtoken      = "8"
 lazy_static       = "1.4"
 libreauth         = "0.16"
 num_cpus          = "1"
-shuttle-actix-web = "0.18.0"
+shuttle-actix-web = "0.18"
 shuttle-runtime   = "0.18"
 shuttle-service   = { version = "0.18", default-features = false }
 shuttle-shared-db = { version = "0.18", features = ["postgres"] }
+slug              = "0.1.4"
 sqlx              = { version = "0.6", default-features = false }
-tokio             = "1"
+tokio             = { version = "1", features = ["macros", "rt-multi-thread"] }

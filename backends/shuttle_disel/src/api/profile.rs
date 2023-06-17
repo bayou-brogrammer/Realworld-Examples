@@ -1,11 +1,11 @@
 use crate::error::AppResult;
 use crate::models::user::User;
-use crate::utils::{authenticate, Auth};
+use crate::utils::auth::{authenticate, Auth};
 use crate::AppState;
 use actix::Message;
 use actix_web::web::{self};
 use actix_web::{HttpRequest, HttpResponse, ResponseError};
-use futures::FutureExt;
+use futures::{FutureExt, TryFutureExt};
 use serde::Serialize;
 
 // ================================== Client Messages ================================== //
@@ -14,6 +14,20 @@ use serde::Serialize;
 pub struct GetProfile {
     // auth is option in case authentication fails or isn't present
     pub auth: Option<Auth>,
+    pub username: String,
+}
+
+#[derive(Debug, Message)]
+#[rtype(result = "AppResult<ProfileResponse>")]
+pub struct FollowProfile {
+    pub auth: Auth,
+    pub username: String,
+}
+
+#[derive(Debug, Message)]
+#[rtype(result = "AppResult<ProfileResponse>")]
+pub struct UnFollowProfile {
+    pub auth: Auth,
     pub username: String,
 }
 
@@ -75,10 +89,11 @@ async fn follow_profile(
     user_name: web::Path<String>,
 ) -> AppResult<HttpResponse> {
     let db = &state.db;
+
     Ok(authenticate(&state, &req)
-        .then(|auth| async move {
-            db.send(GetProfile {
-                auth: auth.ok(),
+        .and_then(|auth| async move {
+            db.send(FollowProfile {
+                auth,
                 username: user_name.to_owned(),
             })
             .await?
@@ -97,10 +112,11 @@ async fn unfollow_profile(
     user_name: web::Path<String>,
 ) -> AppResult<HttpResponse> {
     let db = &state.db;
+
     Ok(authenticate(&state, &req)
-        .then(|auth| async move {
-            db.send(GetProfile {
-                auth: auth.ok(),
+        .and_then(|auth| async move {
+            db.send(UnFollowProfile {
+                auth,
                 username: user_name.to_owned(),
             })
             .await?

@@ -2,8 +2,8 @@ CREATE TABLE followers (
     PRIMARY KEY (user_id, follower_id),
     user_id UUID NOT NULL REFERENCES users (id),
     follower_id UUID NOT NULL REFERENCES users (id),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 CREATE INDEX IF NOT EXISTS followers_user_id_idx ON followers (user_id);
 CREATE INDEX IF NOT EXISTS followers_follower_user_id_idx ON followers (follower_id);
