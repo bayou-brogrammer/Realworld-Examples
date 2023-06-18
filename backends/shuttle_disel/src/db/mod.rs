@@ -1,6 +1,9 @@
 pub mod auth;
 pub use auth::*;
 
+pub mod comments;
+pub use comments::*;
+
 pub mod articles;
 pub use articles::*;
 
