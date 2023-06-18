@@ -19,8 +19,7 @@ pub struct TagsResponse {
 
 // ================================== Handlers ================================== //
 
-#[actix_web::get("")]
-async fn get_tags(state: web::Data<AppState>) -> AppResult<HttpResponse> {
+pub async fn get_tags(state: web::Data<AppState>) -> AppResult<HttpResponse> {
     Ok(state.db.send(GetTags).await.map(|res| match res {
         Err(e) => e.error_response(),
         Ok(res) => HttpResponse::Ok().json(res),

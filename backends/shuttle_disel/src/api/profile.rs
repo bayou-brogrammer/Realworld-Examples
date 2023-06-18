@@ -60,8 +60,7 @@ impl ProfileResponse {
 
 // ================================== Handlers ================================== //
 
-#[actix_web::get("")]
-async fn get_profile(
+pub async fn get_profile(
     req: HttpRequest,
     state: web::Data<AppState>,
     user_name: web::Path<String>,
@@ -82,8 +81,7 @@ async fn get_profile(
         .await)
 }
 
-#[actix_web::post("/follow")]
-async fn follow_profile(
+pub async fn follow_profile(
     req: HttpRequest,
     state: web::Data<AppState>,
     user_name: web::Path<String>,
@@ -105,8 +103,7 @@ async fn follow_profile(
         .await)
 }
 
-#[actix_web::delete("/follow")]
-async fn unfollow_profile(
+pub async fn unfollow_profile(
     req: HttpRequest,
     state: web::Data<AppState>,
     user_name: web::Path<String>,

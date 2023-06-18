@@ -6,29 +6,35 @@ mod routes;
 mod schema;
 mod utils;
 
-use std::sync::mpsc;
-
 use actix::{Addr, SyncArbiter, System};
 use actix_web::{
     get,
     middleware::Logger,
     web::{self, ServiceConfig},
 };
-use db::{Conn, DbExecutor, PgPool};
 use diesel::r2d2::{self, ConnectionManager};
 use dotenv::dotenv;
-use error::AppResult;
 use shuttle_actix_web::ShuttleActixWeb;
+use std::sync::mpsc;
+
+use crate::api::{articles, comments, profile, tags, user};
+use db::{Conn, DbExecutor, PgPool};
+use error::AppResult;
 
 #[derive(Clone)]
 pub struct AppState {
-    // pub pool: PgPool,
     pub db: Addr<DbExecutor>,
 }
 
 #[get("/")]
 async fn hello_world() -> &'static str {
     "Hello World!"
+}
+
+pub fn new_pool<S: Into<String>>(database_url: S) -> AppResult<PgPool> {
+    let manager = ConnectionManager::<Conn>::new(database_url.into());
+    let pool = r2d2::Pool::builder().build(manager)?;
+    Ok(pool)
 }
 
 #[shuttle_runtime::main]
@@ -58,27 +64,59 @@ async fn actix_web(
     let config = move |cfg: &mut ServiceConfig| {
         cfg.service(hello_world).service(
             web::scope("/api")
+                .app_data(state)
                 .wrap(Logger::default())
-                .service(routes::user::user_routes())
-                .service(routes::user::users_routes())
-                .service(routes::profile::profile_routes())
+                // User routes ↓
+                .service(web::resource("users").route(web::post().to(user::registration)))
+                .service(web::resource("users/login").route(web::post().to(user::login)))
+                .service(
+                    web::resource("user")
+                        .route(web::get().to(user::get_current_user))
+                        .route(web::put().to(user::update_user)),
+                )
+                // Profile routes ↓
+                .service(
+                    web::resource("profiles/{username}").route(web::get().to(profile::get_profile)),
+                )
+                .service(
+                    web::resource("profiles/{username}/follow")
+                        .route(web::post().to(profile::follow_profile))
+                        .route(web::delete().to(profile::unfollow_profile)),
+                )
+                // Article routes ↓
+                .service(
+                    web::resource("articles")
+                        .route(web::get().to(articles::get_articles))
+                        .route(web::post().to(articles::create_article)),
+                )
+                .service(
+                    web::resource("articles/feed")
+                        .route(web::get().to(articles::get_feed_articles)),
+                )
+                .service(
+                    web::resource("articles/{slug}")
+                        .route(web::get().to(articles::get_article))
+                        .route(web::put().to(articles::update_article))
+                        .route(web::delete().to(articles::delete_article)),
+                )
+                .service(
+                    web::resource("articles/{slug}/favorite")
+                        .route(web::post().to(articles::favorite_article))
+                        .route(web::delete().to(articles::unfavorite_article)),
+                )
+                .service(
+                    web::resource("articles/{slug}/comments")
+                        .route(web::get().to(comments::get_comments))
+                        .route(web::post().to(comments::add_comment)),
+                )
                 .service(
                     web::resource("articles/{slug}/comments/{comment_id}")
-                        .route(web::delete().to(crate::api::comments::delete_comment)),
+                        .route(web::delete().to(comments::delete_comment)),
                 )
-                .service(routes::comments::comment_routes())
-                .service(routes::articles::article_feed_routes())
-                .service(routes::articles::article_routes())
-                .service(routes::tags::tags_routes())
-                .app_data(state),
+                // Tags routes ↓
+                .service(web::resource("tags").route(web::get().to(tags::get_tags))),
         );
     };
 
     Ok(config.into())
-}
-
-pub fn new_pool<S: Into<String>>(database_url: S) -> AppResult<PgPool> {
-    let manager = ConnectionManager::<Conn>::new(database_url.into());
-    let pool = r2d2::Pool::builder().build(manager)?;
-    Ok(pool)
 }

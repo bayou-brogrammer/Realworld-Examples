@@ -72,8 +72,7 @@ pub struct CommentListResponse {
 
 // ================================== HANDLERS ================================== //
 
-#[actix_web::post("")]
-async fn add_comment(
+pub async fn add_comment(
     req: HttpRequest,
     slug: web::Path<String>,
     state: web::Data<AppState>,
@@ -100,8 +99,7 @@ async fn add_comment(
         .await)
 }
 
-#[actix_web::get("")]
-async fn get_comments(
+pub async fn get_comments(
     req: HttpRequest,
     slug: web::Path<String>,
     state: web::Data<AppState>,

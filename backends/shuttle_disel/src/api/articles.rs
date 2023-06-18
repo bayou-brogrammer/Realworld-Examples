@@ -178,8 +178,7 @@ pub struct ArticleListResponse {
 
 // ================================== Handlers ================================== //
 
-#[actix_web::post("")]
-async fn create_article(
+pub async fn create_article(
     req: HttpRequest,
     state: web::Data<AppState>,
     form: Json<In<CreateArticleData>>,
@@ -197,8 +196,7 @@ async fn create_article(
         .await)
 }
 
-#[actix_web::get("/{slug}")]
-async fn get_article(
+pub async fn get_article(
     req: HttpRequest,
     slug: web::Path<String>,
     state: web::Data<AppState>,
@@ -220,8 +218,7 @@ async fn get_article(
         .await)
 }
 
-#[actix_web::get("")]
-async fn get_feed_articles(
+pub async fn get_feed_articles(
     req: HttpRequest,
     params: Query<FeedParams>,
     state: web::Data<AppState>,
@@ -243,8 +240,7 @@ async fn get_feed_articles(
         .await)
 }
 
-#[actix_web::get("/")]
-async fn get_articles(
+pub async fn get_articles(
     req: HttpRequest,
     state: web::Data<AppState>,
     params: Query<ArticlesParams>,
@@ -266,8 +262,7 @@ async fn get_articles(
         .await)
 }
 
-#[actix_web::put("/{slug}")]
-async fn update_article(
+pub async fn update_article(
     req: HttpRequest,
     slug: web::Path<String>,
     state: web::Data<AppState>,
@@ -294,8 +289,7 @@ async fn update_article(
         .await)
 }
 
-#[actix_web::delete("/{slug}")]
-async fn delete_article(
+pub async fn delete_article(
     req: HttpRequest,
     slug: web::Path<String>,
     state: web::Data<AppState>,
@@ -317,8 +311,7 @@ async fn delete_article(
         .await)
 }
 
-#[actix_web::post("/{slug}/favorite")]
-async fn favorite_article(
+pub async fn favorite_article(
     req: HttpRequest,
     slug: web::Path<String>,
     state: web::Data<AppState>,
@@ -340,8 +333,7 @@ async fn favorite_article(
         .await)
 }
 
-#[actix_web::delete("/{slug}/favorite")]
-async fn unfavorite_article(
+pub async fn unfavorite_article(
     req: HttpRequest,
     slug: web::Path<String>,
     state: web::Data<AppState>,

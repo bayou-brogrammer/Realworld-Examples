@@ -120,8 +120,7 @@ impl UserResponse {
 
 // ================================== Handlers ================================== //
 
-#[actix_web::post("")]
-async fn registration(
+pub async fn registration(
     state: web::Data<AppState>,
     form: Json<In<RegistrationUser>>,
 ) -> AppResult<HttpResponse> {
@@ -134,7 +133,6 @@ async fn registration(
     })?)
 }
 
-#[actix_web::get("/login")]
 pub async fn login(
     state: web::Data<AppState>,
     form: Json<In<LoginUser>>,
@@ -148,7 +146,6 @@ pub async fn login(
     })?)
 }
 
-#[actix_web::get("")]
 pub async fn get_current_user(
     req: HttpRequest,
     state: web::Data<AppState>,
@@ -160,7 +157,6 @@ pub async fn get_current_user(
         .await
 }
 
-#[actix_web::put("")]
 pub async fn update_user(
     req: HttpRequest,
     state: web::Data<AppState>,
