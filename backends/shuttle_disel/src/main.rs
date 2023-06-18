@@ -2,7 +2,6 @@ mod api;
 mod db;
 mod error;
 mod models;
-mod routes;
 mod schema;
 mod utils;
 
